@@ -1,0 +1,9 @@
+{
+  "Mode": "dev",
+  "Server": "",
+  "Database": "",
+  "InputPort": "8000",
+  "UseUsernameAndPassword": false,
+  "Username": "",
+  "Password": ""
+}
