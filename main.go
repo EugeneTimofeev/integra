@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"github.com/chai2010/winsvc"
 	_ "github.com/denisenkom/go-mssqldb"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"os"
@@ -166,11 +165,8 @@ func StartServer() {
 		Log(0, " Error db query:", err)
 	}
 	db.Close()
-	r := mux.NewRouter()
-	r.HandleFunc(
-		"/goexec",
-		createObj,
-	).Methods("POST")
+	r := http.NewServeMux()
+	r.HandleFunc("/goexec", createObj)
 	Log(0, "Error open listening", (http.ListenAndServe(":"+app.InputPort, r)))
 }
 
@@ -198,49 +194,51 @@ func initApp(a *App) {
 }
 
 func createObj(w http.ResponseWriter, r *http.Request) {
-	Log(2, "createObj", nil)
-	w.Header().Set("Content-Type", "application/json")
-	var reqObj Test1C
-	var err error
-	result := "ok"
-	ctx := context.Background()
-	db, err = sql.Open("mssql", connString)
-	if err != nil {
-		Log(1, "sql.Open error", err)
-		result = "error"
+	if r.Method == http.MethodPost {
+		Log(2, "createObj", nil)
+		w.Header().Set("Content-Type", "application/json")
+		var reqObj Test1C
+		var err error
+		result := "ok"
+		ctx := context.Background()
+		db, err = sql.Open("mssql", connString)
+		if err != nil {
+			Log(1, "sql.Open error", err)
+			result = "error"
+		}
+		defer db.Close()
+		if db == nil {
+			Log(1, "createObj: db is nill", errors.New("createObj: db is nill"))
+			result = "error"
+		}
+		err = db.PingContext(ctx)
+		if err != nil {
+			Log(1, "createObj PingContext error", err)
+			result = "error"
+		}
+		err = json.NewDecoder(r.Body).Decode(&reqObj)
+		if err != nil {
+			Log(1, "Decode json error", err)
+			result = "error"
+		}
+		outXML := OutXML{CorID: reqObj.CorrelationId, PaymentDoc: reqObj.PaymentDocumentID, PaymentOrder: reqObj.PaymentOrderNumber}
+		var enc []byte
+		enc, err = xml.MarshalIndent(outXML, " ", "  ")
+		if err != nil {
+			Log(1, "Encode XML error", err)
+			result = "error"
+		}
+		_, err = db.ExecContext(ctx, "_tee_testProc"+"'"+string(enc)+"'")
+		if err != nil {
+			Log(1, "", err)
+			result = "error"
+		}
+		err = json.NewEncoder(w).Encode(result)
+		if err != nil {
+			Log(1, "Create response error", err)
+		}
 	}
-	defer db.Close()
-	if db == nil {
-		Log(1, "createObj: db is nill", errors.New("createObj: db is nill"))
-		result = "error"
-	}
-	err = db.PingContext(ctx)
-	if err != nil {
-		Log(1, "createObj PingContext error", err)
-		result = "error"
-	}
-	err = json.NewDecoder(r.Body).Decode(&reqObj)
-	if err != nil {
-		Log(1, "Decode json error", err)
-		result = "error"
-	}
-	outXML := OutXML{CorID: reqObj.CorrelationId, PaymentDoc: reqObj.PaymentDocumentID, PaymentOrder: reqObj.PaymentOrderNumber}
-	var enc []byte
-	enc, err = xml.MarshalIndent(outXML, " ", "  ")
-	if err != nil {
-		Log(1, "Encode XML error", err)
-		result = "error"
-	}
-	_, err = db.ExecContext(ctx, "_tee_testProc"+"'"+string(enc)+"'")
-	if err != nil {
-		Log(1, "", err)
-		result = "error"
-	}
-	err = json.NewEncoder(w).Encode(result)
-	if err != nil {
-		Log(1, "Create response error", err)
-	}
-	
+
 }
 func Log(level int, message string, inputErr error) {
 	t := time.Now().Format("20060102")
