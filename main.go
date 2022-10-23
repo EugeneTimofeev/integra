@@ -53,8 +53,6 @@ var (
 	flagServiceUninstall = flag.Bool("service-remove", false, "Remove service")
 	flagServiceStart     = flag.Bool("service-start", false, "Start service")
 	flagServiceStop      = flag.Bool("service-stop", false, "Stop service")
-
-	flagHelp = flag.Bool("help", false, "Show usage and exit.")
 )
 
 func init() {
