@@ -18,16 +18,9 @@ import (
 )
 
 type Test1C struct {
-	CorrelationId      string `json:"CorrelationId"`
-	PaymentDocumentID  string `json:"PaymentDocumentID"`
-	PaymentOrderNumber string `json:"PaymentOrderNumber"`
-}
-
-type OutXML struct {
-	XMLName      xml.Name `xml:"test1C"`
-	CorID        string   `xml:"corID"`
-	PaymentDoc   string   `xml:"paymentDoc"`
-	PaymentOrder string   `xml:"paymentOrder"`
+	CorrelationId      string `xml:"corID" json:"CorrelationId"`
+	PaymentDocumentID  string `xml:"paymentDoc" json:"PaymentDocumentID"`
+	PaymentOrderNumber string `xml:"paymentOrder" json:"PaymentOrderNumber"`
 }
 
 type App struct {
@@ -219,9 +212,8 @@ func createObj(w http.ResponseWriter, r *http.Request) {
 			Log(1, "Decode json error", err)
 			result = "error"
 		}
-		outXML := OutXML{CorID: reqObj.CorrelationId, PaymentDoc: reqObj.PaymentDocumentID, PaymentOrder: reqObj.PaymentOrderNumber}
 		var enc []byte
-		enc, err = xml.MarshalIndent(outXML, " ", "  ")
+		enc, err = xml.MarshalIndent(reqObj, " ", "  ")
 		if err != nil {
 			Log(1, "Encode XML error", err)
 			result = "error"
